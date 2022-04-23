@@ -31,7 +31,7 @@ void printHexArray(byte* array, int size) {
   Serial.println();
 }
 
-void printIntArray(int* array, int size) {
+void printIntArray(uint8_t* array, int size) {
   for(int i=0; i<size; i++){
     printHex(array[i]);
     Serial.print(" ");

@@ -25,6 +25,7 @@
 #include "config.h"
 #include "TxHelper.h"
 
+#define DEBUG 1
 
 // wrap code to be executed only under DEBUG conditions in D()
 #ifdef DEBUG
@@ -366,9 +367,12 @@ void loop()
     }
   }
 
+  i2c2midi_runops(&i2c2midi_received, i2c2midi_data);
+
   if (shouldDoMidiRead)
   {
     doMidiRead();
+    i2c2midi_readmidi();
     noInterrupts();
     shouldDoMidiRead = false;
     interrupts();
@@ -382,7 +386,7 @@ void loop()
     interrupts();
   }
 
-  i2c2midi_loop(&i2c2midi_received, i2c2midi_data);
+  i2c2midi_update();
 }
 
 /*
@@ -402,7 +406,8 @@ void readMidi()
 void doMidiRead()
 {
   MIDI.read();
-  usbMIDI.read();
+  // handled by i2c2midi now
+  //usbMIDI.read(); 
 }
 
 /*
