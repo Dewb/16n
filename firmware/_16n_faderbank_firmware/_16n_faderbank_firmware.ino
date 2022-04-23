@@ -25,7 +25,6 @@
 #include "config.h"
 #include "TxHelper.h"
 
-#define DEBUG
 
 // wrap code to be executed only under DEBUG conditions in D()
 #ifdef DEBUG
@@ -562,7 +561,7 @@ void i2cReadRequest()
   // check if this is for i2c2midi
   if (Wire.getRxAddr() == i2c2midi_address)
   {
-    opFunctions(true, i2c2midi_data);
+    opFunctions(true, (int8_t*)i2c2midi_data);
     return;
   }
   else if (Wire.getRxAddr() != I2C_ADDRESS)

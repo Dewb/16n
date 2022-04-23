@@ -103,23 +103,34 @@
 // MIDI TRS
 //MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);  
 
- 
+// send channels 17-32 to the host instead
+#define midiDevice usbMIDI
 
 
 // -------------------------------------------------------------------------------------------
 
 // channels
 //#ifdef MK2
-//  const byte channelsOut = 32;    // number of MIDI channels OUT (1-16 for TRS out, 17-32 for USB out)
-//  const byte channelsIn = 16;     // number of MIDI channels IN  (16 for USB in)
+  const byte channelsOut = 32;    // number of MIDI channels OUT (1-16 for TRS out, 17-32 for USB out)
+  const byte channelsIn = 16;     // number of MIDI channels IN  (16 for USB in)
 //#else
-  const byte channelsOut = 16;    // number of MIDI channels OUT
-  const byte channelsIn = 0;     // number of MIDI channels IN
+// const byte channelsOut = 16;    // number of MIDI channels OUT
+// const byte channelsIn = 0;     // number of MIDI channels IN
 //#endif
 
 // notes
+
+
 const byte maxNotes = 8;
-unsigned long notes[channelsOut][maxNotes][7];  
+struct NOTE {
+  uint8_t number;
+  long start;
+  long duration;
+  bool on;
+  uint8_t velocity;
+  uint8_t rachet;
+  uint8_t repeat;
+} notes[channelsOut][maxNotes];
 // array to store notes: 
 // 0 : note number
 // 1 : start time
@@ -139,7 +150,7 @@ byte noteUpperLimit = 127;                         // global setting for highest
 byte noteLowerLimit = 0;                           // global setting for lowest allowed midi note
 
 // CCs
-int CCs[channelsOut][127][3];                    
+int16_t CCs[channelsOut][127][3];
 // array to store CC values: 
 // 1 : current value
 // 2 : slew time in ms
@@ -171,7 +182,13 @@ int chordStrumming[maxChords];                     // strumming transformation s
 
 // Scheduled notes
 const byte maxNotesScheduled = 42;                 // maximum allowed notes for scheduling
-unsigned long scheduledNotes[maxNotesScheduled][5];
+struct SCHEDULED_NOTE {
+  uint8_t number;
+  long start;
+  long duration;
+  uint8_t velocity;
+  uint8_t channel;
+} scheduledNotes[maxNotesScheduled];
 // array to store scheduled notes: 
 // 0 : note number
 // 1 : start time scheduled
@@ -202,11 +219,11 @@ byte lastCIn = 0;                                  // the last controller number
 byte lastCCIn = 0;                                 // the last CC value received via MIDI in
 
 // LEDs
-const byte led1 = 3;                               // pin definition for led 1
-const byte led2 = 2;                               // pin definition for led 2
-unsigned long lastLEDMillis1 = 0;                  // last time LED 1 turned on
-unsigned long lastLEDMillis2 = 0;                  // last time LED 2 turned on
-const byte animationSpeed = 100;                   // start up animation speed
+// const byte led1 = 3;                               // pin definition for led 1
+// const byte led2 = 2;                               // pin definition for led 2
+// unsigned long lastLEDMillis1 = 0;                  // last time LED 1 turned on
+// unsigned long lastLEDMillis2 = 0;                  // last time LED 2 turned on
+// const byte animationSpeed = 100;                   // start up animation speed
 
 
 
@@ -424,12 +441,12 @@ void midiCC(int channel, int controller, int value_, bool useRamp) {
   if (channel < 0 || channel >= channelsOut) return;
   if (controller < 0 || controller > 127) return;
   
-  int offset = CCs[channel][controller][2];          
-  int value = value_ + offset;
+  int16_t offset = CCs[channel][controller][2];
+  int16_t value = value_ + offset;
   if (value < 0) value = 0;
   if (value > 16383) value = 16383;
   
-  int slewTime = CCs[channel][controller][1];             // get the set slew time for controller
+  int16_t slewTime = CCs[channel][controller][1];             // get the set slew time for controller
 
   // if ramp is allowed and slew time higher than zero: use a ramp
   if (useRamp == true && slewTime != 0) {
@@ -557,7 +574,7 @@ void sendMidiCC(int channel, int controller, int value) {
     #endif
   } else {
     #ifdef MK2
-      //midiDevice.sendControlChange(controller, value, channel+1-16);
+      midiDevice.sendControlChange(controller, value, channel+1-16);
     #endif
   }
   blinkLED(1); 
@@ -865,7 +882,7 @@ void sendMidiProgramChange(int channel, int programNumber) {
     #endif
   } else {
     #ifdef MK2
-      // midiDevice.sendProgramChange(programNumber, channel+1-16);
+      midiDevice.sendProgramChange(programNumber, channel+1-16);
     #endif
   }
   blinkLED(1);
@@ -896,7 +913,7 @@ void sendMidiPitchBend(int channel, int value) {
     #endif
   } else {
     #ifdef MK2
-      // midiDevice.sendPitchBend(value, channel+1-16);
+      midiDevice.sendPitchBend(value, channel+1-16);
     #endif
   }
   blinkLED(1);
@@ -927,7 +944,7 @@ void sendMidiAftertouch(int channel, int value) {
     #endif   
   } else {
     #ifdef MK2
-      // midiDevice.sendAfterTouch(value, channel+1-16);
+      midiDevice.sendAfterTouch(value, channel+1-16);
     #endif
   }        
   blinkLED(1);
@@ -950,7 +967,7 @@ void sendMidiClock() {
     usbMIDI.sendRealTime(usbMIDI.Clock);
   #endif   
   #ifdef MK2
-    // midiDevice.sendRealTime(midiDevice.Clock);
+    midiDevice.sendRealTime(midiDevice.Clock);
   #endif
 }
 
@@ -965,7 +982,7 @@ void sendMidiClockStart() {
     usbMIDI.sendRealTime(usbMIDI.Start);
   #endif   
   #ifdef MK2
-    // midiDevice.sendRealTime(midiDevice.Start);
+    midiDevice.sendRealTime(midiDevice.Start);
   #endif
   #ifdef DEBUG
     Serial.println("Sending MIDI Clock Start");
@@ -983,7 +1000,7 @@ void sendMidiClockStop() {
     usbMIDI.sendRealTime(usbMIDI.Stop);
   #endif  
   #ifdef MK2 
-    // midiDevice.sendRealTime(midiDevice.Stop);
+    midiDevice.sendRealTime(midiDevice.Stop);
   #endif
   #ifdef DEBUG
     Serial.println("Sending MIDI Clock Stop");
@@ -1001,7 +1018,7 @@ void sendMidiClockContinue() {
     usbMIDI.sendRealTime(usbMIDI.Continue);
   #endif 
   #ifdef MK2  
-    // midiDevice.sendRealTime(midiDevice.Continue);
+    midiDevice.sendRealTime(midiDevice.Continue);
   #endif
   #ifdef DEBUG
     Serial.println("Sending MIDI Clock Continue");
@@ -1031,15 +1048,17 @@ void panic() {
   } 
   for (int j=0; j < channelsOut; j++) {                           
     for (int i=0; i < maxNotes; i++) {                            
-      notes[j][i][5] = 0;   // reset ratchet count
-      notes[j][i][6] = 0;   // reset repeat count
+      notes[j][i].rachet = 0;   // reset ratchet count
+      notes[j][i].repeat = 0;   // reset repeat count
     }
   } 
   // reset scheduled notes
   for (int i = 0; i < maxNotesScheduled; i++) {
-    for (int j = 0; j < 5; j++) {
-      scheduledNotes[i][j] = 0;
-    }
+    scheduledNotes[i].number = 0;
+    scheduledNotes[i].start = 0;
+    scheduledNotes[i].duration = 0;
+    scheduledNotes[i].velocity = 0;
+    scheduledNotes[i].channel = 0;
     scheduledNoteCount -= 1;
   }
 
@@ -1079,12 +1098,12 @@ void midiNoteOn(int channel, int noteNumber_, int velocity, int noteDuration) {
 
   // check if this note is already playing; if yes, send note off first
   for (int i=0; i < maxNotes; i++) {
-    if (notes[channel][i][0] == noteNumber && notes[channel][i][3] == 1) {
+    if (notes[channel][i].number == noteNumber && notes[channel][i].on) {
       #ifdef DEBUG
         Serial.println("Note is already playing"); 
       #endif
-      sendMidiNoteOff(channel, notes[channel][i][0]);
-      notes[channel][i][3] = 0;
+      sendMidiNoteOff(channel, notes[channel][i].number);
+      notes[channel][i].on = false;
     }
   }
   noteCount[channel] += 1;                                        // count one note up
@@ -1092,7 +1111,7 @@ void midiNoteOn(int channel, int noteNumber_, int velocity, int noteDuration) {
   // check if next note number is still playing; if yes, skip to next note number; 
   // if there's no more space available, replace the note
   for (int i=0; i < maxNotes; i++) {                        
-    if (notes[channel][currentNote[channel]][3] == 1) {
+    if (notes[channel][currentNote[channel]].on) {
       noteCount[channel] += 1;                              
       currentNote[channel] = noteCount[channel] % maxNotes;
     }
@@ -1107,15 +1126,15 @@ void midiNoteOn(int channel, int noteNumber_, int velocity, int noteDuration) {
     
     newNoteDuration = noteDuration / currentRatcheting * ratchetingLength / 100;
     if (newNoteDuration <= 0) return; 
-    notes[channel][currentNote[channel]][5] = currentRepetition * currentRatcheting;  
+    notes[channel][currentNote[channel]].rachet = currentRepetition * currentRatcheting;
   }
   
   // store the values for the note in the notes array
-  notes[channel][currentNote[channel]][0] = noteNumber;           // note number
-  notes[channel][currentNote[channel]][1] = millis();             // note start time
-  notes[channel][currentNote[channel]][2] = newNoteDuration;      // note duration
-  notes[channel][currentNote[channel]][3] = 1;                    // note is on
-  notes[channel][currentNote[channel]][4] = velocity;             // note is on
+  notes[channel][currentNote[channel]].number = noteNumber;           // note number
+  notes[channel][currentNote[channel]].start = millis();             // note start time
+  notes[channel][currentNote[channel]].duration = newNoteDuration;      // note duration
+  notes[channel][currentNote[channel]].on = true;                    // note is on
+  notes[channel][currentNote[channel]].velocity = velocity;             // note is on
   sendMidiNoteOn(channel, noteNumber, velocity);  
 }
 
@@ -1129,21 +1148,21 @@ void checkNoteDurations() {
   for (int j=0; j < channelsOut; j++) {                           // go through all channels
     for (int i=0; i < maxNotes; i++) {                            // go through all notes
     
-      if (notes[j][i][3] != 0 && notes[j][i][2] != 0) {           // check if note is currently playing and duration is not 0
-        if (currentTime - notes[j][i][1] > notes[j][i][2]) {      // if yes, check if the note duration has been reached
-          sendMidiNoteOff(j, notes[j][i][0]);                     // if yes, send MIDI Note off
-          notes[j][i][3] = 0;                                     // set note on/off to off
+      if (notes[j][i].on && notes[j][i].duration != 0) {           // check if note is currently playing and duration is not 0
+        if (currentTime - notes[j][i].start > notes[j][i].duration) {      // if yes, check if the note duration has been reached
+          sendMidiNoteOff(j, notes[j][i].number);                     // if yes, send MIDI Note off
+          notes[j][i].on = false;                                     // set note on/off to off
         }
       } 
 
       // note repetition & ratcheting
       if (currentRepetition > 1 || currentRatcheting > 1) {       // if racheting or repetition is set than 1
-      if (notes[j][i][5] > 1) {                                   // index 5 is ratchet/rep count, do if higher than 1
-          if (currentTime - notes[j][i][1] > notes[j][i][2] * 100 / ratchetingLength) { 
-            notes[j][i][1] = millis();                            // note start time
-            notes[j][i][3] = 1;                                   // set note is on
-            sendMidiNoteOn(j, notes[j][i][0], notes[j][i][4]);    // send same note with same velocity
-            notes[j][i][5] -= 1;                                  // update ratchet count
+      if (notes[j][i].rachet > 1) {                                   // index 5 is ratchet/rep count, do if higher than 1
+          if (currentTime - notes[j][i].start > notes[j][i].duration * 100 / ratchetingLength) {
+            notes[j][i].start = millis();                            // note start time
+            notes[j][i].on = true;                                   // set note is on
+            sendMidiNoteOn(j, notes[j][i].number, notes[j][i].velocity);    // send same note with same velocity
+            notes[j][i].rachet -= 1;                                  // update ratchet count
           }
         }
       }  
@@ -1182,7 +1201,7 @@ void sendMidiNoteOn(int channel, int noteNumber, int velocity) {
     #endif
   } else {
     #ifdef MK2
-      // midiDevice.sendNoteOn(noteNumber, velocity, channel+1-16);
+      midiDevice.sendNoteOn(noteNumber, velocity, channel+1-16);
     #endif
   }
   blinkLED(1);
@@ -1214,7 +1233,7 @@ void sendMidiNoteOff(int channel, int noteNumber) {
     #endif
   } else {
     #ifdef MK2
-      // midiDevice.sendNoteOff(noteNumber, 0, channel+1-16);
+      midiDevice.sendNoteOff(noteNumber, 0, channel+1-16);
     #endif
   }
   blinkLED(1);
@@ -1321,13 +1340,13 @@ void setLatch(int value) {
 
 
 void scheduleNote(int channel, int noteNumber, int velocity, int noteDuration, int delay) {
-  scheduledNotes[scheduledNoteCount][0] = noteNumber;
-  scheduledNotes[scheduledNoteCount][1] = millis() + delay;
-  scheduledNotes[scheduledNoteCount][2] = noteDuration;
-  scheduledNotes[scheduledNoteCount][3] = velocity;
-  scheduledNotes[scheduledNoteCount][4] = channel;
+  scheduledNotes[scheduledNoteCount].number = noteNumber;
+  scheduledNotes[scheduledNoteCount].start = millis() + delay;
+  scheduledNotes[scheduledNoteCount].duration = noteDuration;
+  scheduledNotes[scheduledNoteCount].velocity = velocity;
+  scheduledNotes[scheduledNoteCount].channel = channel;
   #ifdef DEBUG  
-    Serial.print("Scheduling note: "); Serial.println(scheduledNotes[scheduledNoteCount][0]);
+    Serial.print("Scheduling note: "); Serial.println(scheduledNotes[scheduledNoteCount].number);
   #endif
   scheduledNoteCount = (scheduledNoteCount + 1) % maxNotesScheduled;
 }
@@ -1339,15 +1358,17 @@ void scheduleNote(int channel, int noteNumber, int velocity, int noteDuration, i
 void checkScheduledNotes() {
   unsigned long currentTime = millis();                   // get current time
   for (int i = 0; i < maxNotesScheduled; i++) {           // go through all scheduled notes
-    if (scheduledNotes[i][1]) {                           // check if the entry is not empty
-      if (currentTime > scheduledNotes[i][1]) {           // check if the scheduled time has been reached
-        midiNoteOn(scheduledNotes[i][4], scheduledNotes[i][0], scheduledNotes[i][3], scheduledNotes[i][2]);
+    if (scheduledNotes[i].start) {                           // check if the entry is not empty
+      if (currentTime > scheduledNotes[i].start) {           // check if the scheduled time has been reached
+        midiNoteOn(scheduledNotes[i].channel, scheduledNotes[i].number, scheduledNotes[i].velocity, scheduledNotes[i].duration);
         #ifdef DEBUG  
-          Serial.print("Playing scheduled note: "); Serial.println(scheduledNotes[i][0]);
+          Serial.print("Playing scheduled note: "); Serial.println(scheduledNotes[i].number);
         #endif
-        for (int j = 0; j < 5; j++) {
-          scheduledNotes[i][j] = 0;
-        }
+        scheduledNotes[i].number = 0;
+        scheduledNotes[i].start = 0;
+        scheduledNotes[i].duration = 0;
+        scheduledNotes[i].velocity = 0;
+        scheduledNotes[i].channel = 0;
         scheduledNoteCount -= 1;
       }
     } 
