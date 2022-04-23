@@ -139,13 +139,13 @@ struct NOTE {
 // 4 : velocity
 // 5 : ratchet count
 // 6 : repeat count
-int noteCount[channelsOut];                        // total note count, per channel
-int currentNote[channelsOut];                      // current note number between 0 and maxNotes, per channel
-int currentNoteDuration = 100;                     // global setting for note duration
+int16_t noteCount[channelsOut];                        // total note count, per channel
+int16_t currentNote[channelsOut];                      // current note number between 0 and maxNotes, per channel
+int16_t currentNoteDuration = 100;                     // global setting for note duration
 int8_t currentNoteShift = 0;                       // global setting for note shift
 byte currentRepetition = 1;                        // global setting for note repetition
 byte currentRatcheting = 1;                        // global setting for note ratcheting
-const int ratchetingLength = 75;                   // in percent: 75 means 75% of original note length for racheted notes
+const uint8_t ratchetingLength = 75;                   // in percent: 75 means 75% of original note length for racheted notes
 byte noteUpperLimit = 127;                         // global setting for highest allowed midi note
 byte noteLowerLimit = 0;                           // global setting for lowest allowed midi note
 
@@ -169,16 +169,16 @@ byte nrpnCount = 0;
 // Chords
 const byte maxChords = 8;                          // number of chords
 const byte chordMaxLength = 8;                     // maximum allowed length of chords
-int chord[maxChords][chordMaxLength];              // array to store chords
+int16_t chord[maxChords][chordMaxLength];              // array to store chords
 byte chordNoteCount[maxChords];                    // number of added notes per chord
 byte chordLength[maxChords];                       // size of chord that should be played
-int currentChord[chordMaxLength];                  // array to store current chord with transformations
+int16_t currentChord[chordMaxLength];                  // array to store current chord with transformations
 byte currentChordLength;                           // length of current chord
 byte currentChordNoteCount;                        // number of added notes in current chord
-int chordReverse[maxChords];                       // reverse transformation setting per chord
-int chordRotate[maxChords];                        // rotate transformation setting per chord
-int chordInversion[maxChords];                     // inversion transformation setting per chord
-int chordStrumming[maxChords];                     // strumming transformation setting per chord
+int16_t chordReverse[maxChords];                       // reverse transformation setting per chord
+int16_t chordRotate[maxChords];                        // rotate transformation setting per chord
+int16_t chordInversion[maxChords];                     // inversion transformation setting per chord
+int16_t chordStrumming[maxChords];                     // strumming transformation setting per chord
 
 // Scheduled notes
 const byte maxNotesScheduled = 42;                 // maximum allowed notes for scheduling

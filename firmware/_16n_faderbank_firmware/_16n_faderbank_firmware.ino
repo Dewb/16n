@@ -46,18 +46,20 @@ int volatile currentValue[channelCount];
 int lastMidiValue[channelCount];
 
 // variables to hold configuration
-int usbChannels[channelCount];
-int trsChannels[channelCount];
-int usbCCs[channelCount];
-int trsCCs[channelCount];
-int legacyPorts[channelCount]; // for V125 only
-int flip;
-int ledOn;
-int ledFlash;
-int i2cMaster;
-int midiThru;
+uint8_t usbChannels[channelCount];
+uint8_t trsChannels[channelCount];
+uint8_t usbCCs[channelCount];
+uint8_t trsCCs[channelCount];
+#ifdef V125
+uint8_t legacyPorts[channelCount]; // for V125 only
+#endif
+uint8_t flip;
+uint8_t ledOn;
+uint8_t ledFlash;
+uint8_t i2cMaster;
+uint8_t midiThru;
 
-const int adcResolutionBits = 13; // 13 bit ADC resolution on Teensy 3.2
+const uint8_t adcResolutionBits = 13; // 13 bit ADC resolution on Teensy 3.2
 int faderMin;
 int faderMax;
 
@@ -74,9 +76,9 @@ int faderMax;
   uint8_t port = 0;
 
   // master i2c specific stuff
-  const int ansibleI2Caddress = 0x20;
-  const int er301I2Caddress = 0x31;
-  const int txoI2Caddress = 0x60;
+  const uint8_t ansibleI2Caddress = 0x20;
+  const uint8_t er301I2Caddress = 0x31;
+  const uint8_t txoI2Caddress = 0x60;
   bool er301Present = false;
   bool ansiblePresent = false;
   bool txoPresent = false;
@@ -87,7 +89,7 @@ ResponsiveAnalogRead *analog[channelCount];
 
 // mux config
 CD74HC4067 mux(8, 7, 6, 5);
-const int muxMapping[16] = {0, 1, 2, 3, 4, 5, 6, 7, 15, 14, 13, 12, 11, 10, 9, 8};
+const uint8_t muxMapping[16] = {0, 1, 2, 3, 4, 5, 6, 7, 15, 14, 13, 12, 11, 10, 9, 8};
 
 // MIDI timers
 IntervalTimer midiWriteTimer;
