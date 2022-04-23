@@ -100,6 +100,13 @@ bool forceMidiWrite = false;
 int activeInput = 0;
 int activeMode = 0;
 
+// i2c2midi 
+
+#include "i2c2midi/i2c2midi_firmware_v4_0.h"
+uint8_t i2c2midi_received;
+uint8_t i2c2midi_data[256];
+byte i2c2midi_address = 0x3F;
+
 /*
  * The function that sets up the application
  */
@@ -261,7 +268,7 @@ if(i2cMaster) {
   D(Serial.println("Enabling i2c enabled in SLAVE mode"));
 
 #ifdef V125
-  Wire1.begin(I2C_SLAVE, I2C_ADDRESS, I2C_PINS_29_30, I2C_PULLUP_EXT, 400000);
+  Wire1.begin(I2C_SLAVE, I2C_ADDRESS, 0x3F, I2C_PINS_29_30, I2C_PULLUP_EXT, 400000);
   Wire1.onReceive(i2cWrite);
   Wire1.onRequest(i2cReadRequest);
 #else
@@ -276,6 +283,10 @@ if(i2cMaster) {
   MIDI.begin();
   midiWriteTimer.begin(writeMidi, midiInterval);
   midiReadTimer.begin(readMidi, midiInterval);
+
+  // init i2c2midi subsystem
+
+  i2c2midi_setup();
 
   pinMode(ledPin, OUTPUT);
 
@@ -367,6 +378,8 @@ void loop()
     shouldDoMidiWrite = false;
     interrupts();
   }
+
+  i2c2midi_loop(i2c2midi_received, i2c2midi_data);
 }
 
 /*
@@ -495,6 +508,17 @@ void sendi2c(uint8_t model, uint8_t deviceIndex, uint8_t cmd, uint8_t devicePort
 void i2cWrite(size_t len)
 {
 
+  // check if this is for i2c2midi
+  if (Wire1.getRxAddr() == i2c2midi_address)
+  {
+    if (len < 256)
+    {
+      Wire1.read(i2c2midi_data, len);
+      i2c2midi_received = len; 
+    }
+    return;
+  }
+
   D(Serial.printf("i2c Write (%d)\n", len));
 
   // parse the response
@@ -528,6 +552,14 @@ void i2cReadRequest()
 {
 
   D(Serial.print("i2c Read\n"));
+
+  // check if this is for i2c2midi 
+  if (Wire1.getRxAddr() == i2c2midi_address)
+  {
+    opFunctions(true, (int8_t*)i2c2midi_data);
+    return;
+  }
+
 
   // get and cast the value
   uint16_t shiftReady = 0;
