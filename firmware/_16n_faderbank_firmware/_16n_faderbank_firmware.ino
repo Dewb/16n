@@ -25,6 +25,8 @@
 #include "config.h"
 #include "TxHelper.h"
 
+#define DEBUG
+
 // wrap code to be executed only under DEBUG conditions in D()
 #ifdef DEBUG
 #define D(x) x
@@ -268,11 +270,11 @@ if(i2cMaster) {
   D(Serial.println("Enabling i2c enabled in SLAVE mode"));
 
 #ifdef V125
-  Wire1.begin(I2C_SLAVE, I2C_ADDRESS, 0x3F, I2C_PINS_29_30, I2C_PULLUP_EXT, 400000);
+  Wire1.begin(I2C_SLAVE, I2C_ADDRESS, I2C_PINS_29_30, I2C_PULLUP_EXT, 400000);
   Wire1.onReceive(i2cWrite);
   Wire1.onRequest(i2cReadRequest);
 #else
-  Wire.begin(I2C_SLAVE, I2C_ADDRESS, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
+  Wire.begin(I2C_SLAVE, I2C_ADDRESS, i2c2midi_address, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
   Wire.onReceive(i2cWrite);
   Wire.onRequest(i2cReadRequest);
 #endif
@@ -379,7 +381,7 @@ void loop()
     interrupts();
   }
 
-  i2c2midi_loop(i2c2midi_received, i2c2midi_data);
+  i2c2midi_loop(&i2c2midi_received, i2c2midi_data);
 }
 
 /*
@@ -509,13 +511,17 @@ void i2cWrite(size_t len)
 {
 
   // check if this is for i2c2midi
-  if (Wire1.getRxAddr() == i2c2midi_address)
+  if (Wire.getRxAddr() == i2c2midi_address)
   {
     if (len < 256)
     {
-      Wire1.read(i2c2midi_data, len);
+      Wire.read(i2c2midi_data, len);
       i2c2midi_received = len; 
     }
+    return;
+  }
+  else if (Wire.getRxAddr() != I2C_ADDRESS)
+  {
     return;
   }
 
@@ -553,10 +559,14 @@ void i2cReadRequest()
 
   D(Serial.print("i2c Read\n"));
 
-  // check if this is for i2c2midi 
-  if (Wire1.getRxAddr() == i2c2midi_address)
+  // check if this is for i2c2midi
+  if (Wire.getRxAddr() == i2c2midi_address)
   {
-    opFunctions(true, (int8_t*)i2c2midi_data);
+    opFunctions(true, i2c2midi_data);
+    return;
+  }
+  else if (Wire.getRxAddr() != I2C_ADDRESS)
+  {
     return;
   }
 

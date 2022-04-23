@@ -255,8 +255,8 @@ void NRPN(int channel, int controller, int value_, bool useRamp);
 void sendNRPN(int channel, int controller, int value);
 int8_t getNextFreeNRPN(int channel, int controller);
 int getNRPNvalue(int channel, int controller, int index);
- void opFunctions(bool isRequest, int8_t data[]);
-
+void opFunctions(bool isRequest, int8_t data[]);
+void printNoteHistory(int channel);
 
 
 
@@ -314,10 +314,10 @@ void i2c2midi_setup() {
 // -------------------------------------------------------------------------------------------
 
 
-void i2c2midi_loop(uint8_t received, uint8_t i2cData[256]) {
+void i2c2midi_loop(uint8_t* received, uint8_t i2cData[256]) {
 
   // I2C 
-  if(received) {
+  if(*received > 0) {
     #ifdef DEBUG
       Serial.print("I2C received"); Serial.print(": ");
       Serial.print("0: "); Serial.print(i2cData[0]); Serial.print(";  ");
@@ -329,7 +329,7 @@ void i2c2midi_loop(uint8_t received, uint8_t i2cData[256]) {
     #endif
 
     opFunctions(false, (int8_t*)i2cData); // call the respective OP with isRequest = false
-    received = 0;                // reset back to 0
+    *received = 0;                // reset back to 0
 
   }
   
